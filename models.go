@@ -1,33 +1,26 @@
 package main
 
 import (
-	"database/sql"
-	"log"
+	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	"gorm.io/gorm"
 )
 
-var db *sql.DB
+type LoginEvent struct {
+	ID         uint      `json:"id" gorm:"primaryKey"`
+	TenantID   string    `json:"tenant_id" gorm:"not null"`
+	Username   string    `json:"username" gorm:"not null"`
+	LoginStatus string   `json:"login_status" gorm:"not null"`
+	Origin     string    `json:"origin" gorm:"not null"`
+	Timestamp  time.Time `json:"timestamp" gorm:"not null"`
+}
 
-func init() {
-    var err error
-    db, err = sql.Open("sqlite3", "./db/database.db")
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    // Optional: create table if not exists
-    _, err = db.Exec(`
-        CREATE TABLE IF NOT EXISTS logins (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tenant_id TEXT,
-            user TEXT,
-            status TEXT,
-            origin TEXT,
-            timestamp TEXT
-        );
-    `)
-    if err != nil {
-        log.Fatal(err)
-    }
+// This function will be used to initialize the database and automatically migrate
+// the schema (creating tables, etc.) when the application starts.
+func MigrateDB(db *gorm.DB) {
+	// Automate migration of the models
+	err := db.AutoMigrate(&LoginEvent{})
+	if err != nil {
+		panic("Failed to migrate the database")
+	}
 }
