@@ -8,14 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type LoginEvent struct {
-	ID        uint    `json:"id" gorm:"primaryKey"`
-    TenantID   string    `json:"tenant_id"`
-    Username   string    `json:"username"`
-    LoginStatus string   `json:"login_status"`
-    Origin     string    `json:"origin"`
-    Timestamp  time.Time `json:"timestamp"`
-}
 
 var db *gorm.DB
 
