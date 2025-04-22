@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -21,13 +20,46 @@ type LoginEvent struct {
 var db *gorm.DB
 
 
-func IngestHandler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Ingest endpoint hit")
+// SuspiciousHandler handles GET requests for suspcious events
+func SuspiciousHandler(w http.ResponseWriter, r *http.Request) {
+	// Query params for filtering (e.g., tenant_id, threshold, time window)
+	tenantID := r.URL.Query().Get("tenant_id")
+	if tenantID == "" {
+		http.Error(w, "Tenant ID is required", http.StatusBadRequest)
+		return
+	}
+
+	threshold := 5           // 5 failed attempts
+	timeWindow := 10 * time.Minute // 10 minutes window
+	now := time.Now()
+
+	// Query for failed login events within the time window
+	var events []LoginEvent
+	if err := db.Where("tenant_id = ? AND login_status = ? AND timestamp >= ?", tenantID, "failure", now.Add(-timeWindow)).Find(&events).Error; err != nil {
+		http.Error(w, "Database error while fetching events", http.StatusInternalServerError)
+		return
+	}
+
+	// Group by origin and count failed attempts
+	originFailedCounts := make(map[string]int)
+	for _, event := range events {
+		originFailedCounts[event.Origin]++
+	}
+
+	// Collect origins with more than the threshold of failures
+	var suspiciousOrigins []string
+	for origin, count := range originFailedCounts {
+		if count >= threshold {
+			suspiciousOrigins = append(suspiciousOrigins, origin)
+		}
+	}
+
+	// Send the suspicious origins as response
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(suspiciousOrigins)
+
 }
 
-func SuspiciousHandler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Suspicious endpoint hit")
-} 
 func CreateLoginEvent(w http.ResponseWriter, r *http.Request){
 	var event LoginEvent
 
@@ -67,4 +99,6 @@ func CreateLoginEvent(w http.ResponseWriter, r *http.Request){
 
 
 }
+
+
 
