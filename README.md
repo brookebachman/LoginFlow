@@ -7,7 +7,9 @@ Go 1.24.2 or higher installed on your machine. You can check your Go version by 
 
 go version
 
-Docker (optional, for running in Docker container).
+Install Docker
+
+brew install docker
 
 SQLite is used as the default database, and it will be created automatically when the API starts if it doesn't exist.
 
