@@ -49,7 +49,7 @@
             username: document.getElementById("username").value,
             login_status: document.getElementById("login_status").value,
             origin: document.getElementById("origin").value,
-            timestamp: new Date().toISOString(), // <- use converted value
+            timestamp: timestamp, // <- use converted value
           };
 
           try {

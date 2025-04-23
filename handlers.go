@@ -71,31 +71,40 @@ func CreateLoginEvent(w http.ResponseWriter, r *http.Request) {
 	
 	//Validate input fields
 	if event.TenantID == "" || event.Username == "" || event.LoginStatus == "" || event.Origin == "" || event.Timestamp.IsZero() {
-		http.Error(w, "Invalid event data", http.StatusBadRequest)
+		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
 
-	//Check if login event already exists
+	//Check if login event already exists within a 5-second window
 	var existingEvent LoginEvent
-	//next line queries the db to see if the event exists, if it does it is then stored in the existing evetn table
-	if err := GetDB().Where("tenant_id = ? AND username = ? AND timestamp = ?", event.TenantID, event.Username, event.Timestamp).First(&existingEvent).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			log.Println("Event does not exist, proceeding to create new event.")
-		} else {
-			log.Println("Error querying the database:", err)
-			http.Error(w, "Database error while checking existing events", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	if existingEvent.ID != 0 {
+	log.Printf("Checking for duplicate event with tenant_id=%s, username=%s, timestamp=%v", 
+		event.TenantID, event.Username, event.Timestamp)
+	
+	// Create a 5-second window around the event timestamp
+	timeWindow := 5 * time.Second
+	startTime := event.Timestamp.Add(-timeWindow)
+	endTime := event.Timestamp.Add(timeWindow)
+	
+	result := GetDB().Where("tenant_id = ? AND username = ? AND timestamp BETWEEN ? AND ?", 
+		event.TenantID, event.Username, startTime, endTime).First(&existingEvent)
+	
+	if result.Error == nil {
+		// If no error, record was found (duplicate exists)
+		log.Printf("Duplicate event found: %+v", existingEvent)
 		http.Error(w, "Event already exists", http.StatusConflict)
 		return
+	} else if result.Error != gorm.ErrRecordNotFound {
+		// If error is not "record not found", it's a database error
+		log.Printf("Error querying the database: %v", result.Error)
+		http.Error(w, "Database error while checking existing events", http.StatusInternalServerError)
+		return
+	} else {
+		log.Printf("No duplicate found, proceeding to create new event")
 	}
 
-	// If the event is not found, meaning its a new login event, save the new event into the database
+	// If we get here, no duplicate was found, create new event
 	if err := GetDB().Create(&event).Error; err != nil {
-		//if it cannot insert the row into the db it sends a 500 error to the cliet
+		log.Printf("Error creating event: %v", err)
 		http.Error(w, "Failed to store event", http.StatusInternalServerError)
 		return
 	}
