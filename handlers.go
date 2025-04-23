@@ -24,7 +24,7 @@ func SuspiciousHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Query for failed login events within the time window
 	var events []LoginEvent
-	if err := db.Where("tenant_id = ? AND login_status = ? AND timestamp >= ?", tenantID, "failure", now.Add(-timeWindow)).Find(&events).Error; err != nil {
+	if err := GetDB().Where("tenant_id = ? AND login_status = ? AND timestamp >= ?", tenantID, "failure", now.Add(-timeWindow)).Find(&events).Error; err != nil {
 		http.Error(w, "Database error while fetching events", http.StatusInternalServerError)
 		return
 	}
@@ -49,7 +49,7 @@ func SuspiciousHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateLoginEvent(w http.ResponseWriter, r *http.Request) {
-	if db == nil {
+	if GetDB() == nil {
 		log.Println("Database connection is nil")
 		http.Error(w, "Database not initialized", http.StatusInternalServerError)
 		return
@@ -72,12 +72,13 @@ func CreateLoginEvent(w http.ResponseWriter, r *http.Request) {
 	//Validate input fields
 	if event.TenantID == "" || event.Username == "" || event.LoginStatus == "" || event.Origin == "" || event.Timestamp.IsZero() {
 		http.Error(w, "Invalid event data", http.StatusBadRequest)
+		return
 	}
 
 	//Check if login event already exists
 	var existingEvent LoginEvent
 	//next line queries the db to see if the event exists, if it does it is then stored in the existing evetn table
-	if err := db.Where("tenant_id = ? AND username = ? AND timestamp = ?", event.TenantID, event.Username, event.Timestamp).First(&existingEvent).Error; err != nil {
+	if err := GetDB().Where("tenant_id = ? AND username = ? AND timestamp = ?", event.TenantID, event.Username, event.Timestamp).First(&existingEvent).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			log.Println("Event does not exist, proceeding to create new event.")
 		} else {
@@ -93,7 +94,7 @@ func CreateLoginEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If the event is not found, meaning its a new login event, save the new event into the database
-	if err := db.Create(&event).Error; err != nil {
+	if err := GetDB().Create(&event).Error; err != nil {
 		//if it cannot insert the row into the db it sends a 500 error to the cliet
 		http.Error(w, "Failed to store event", http.StatusInternalServerError)
 		return
