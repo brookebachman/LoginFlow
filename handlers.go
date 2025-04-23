@@ -22,28 +22,39 @@ func SuspiciousHandler(w http.ResponseWriter, r *http.Request) {
 	timeWindow := 10 * time.Minute // 10 minutes window
 	now := time.Now()
 
+	log.Printf("Checking for suspicious activity for tenant %s in the last %v", tenantID, timeWindow)
+
 	// Query for failed login events within the time window
 	var events []LoginEvent
-	if err := GetDB().Where("tenant_id = ? AND login_status = ? AND timestamp >= ?", tenantID, "failure", now.Add(-timeWindow)).Find(&events).Error; err != nil {
+	if err := GetDB().Where("tenant_id = ? AND login_status = ? AND timestamp >= ?", 
+		tenantID, "failure", now.Add(-timeWindow)).Find(&events).Error; err != nil {
+		log.Printf("Error querying database: %v", err)
 		http.Error(w, "Database error while fetching events", http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("Found %d failed login events", len(events))
 
 	// Group by origin and count failed attempts
 	originFailedCounts := make(map[string]int)
 	for _, event := range events {
 		originFailedCounts[event.Origin]++
+		log.Printf("Origin %s has %d failures", event.Origin, originFailedCounts[event.Origin])
 	}
 
 	// Collect origins with more than the threshold of failures
 	var suspiciousOrigins []string
 	for origin, count := range originFailedCounts {
 		if count >= threshold {
+			log.Printf("Origin %s exceeded threshold with %d failures", origin, count)
 			suspiciousOrigins = append(suspiciousOrigins, origin)
 		}
 	}
 
+	log.Printf("Found %d suspicious origins", len(suspiciousOrigins))
+
 	// Send the suspicious origins as response
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(suspiciousOrigins)
 }
