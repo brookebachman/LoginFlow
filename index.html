@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login Event Ingestion</title>
+  </head>
+  <body>
+    <h1>Create Login Event</h1>
+
+    <form id="loginEventForm">
+      <label for="tenant_id">Tenant ID:</label>
+      <input type="text" id="tenant_id" name="tenant_id" required />
+      <br /><br />
+
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" required />
+      <br /><br />
+
+      <label for="login_status">Login Status:</label>
+      <select id="login_status" name="login_status" required>
+        <option value="success">Success</option>
+        <option value="failure">Failure</option>
+      </select>
+      <br /><br />
+
+      <label for="origin">Origin:</label>
+      <input type="text" id="origin" name="origin" required />
+      <br /><br />
+
+      <label for="timestamp">Timestamp:</label>
+      <input type="datetime-local" id="timestamp" name="timestamp" required />
+      <br /><br />
+
+      <button type="submit">Submit</button>
+    </form>
+
+    <script>
+      document
+        .getElementById("loginEventForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault(); // Prevent the default form submission
+
+          const formData = {
+            tenant_id: document.getElementById("tenant_id").value,
+            username: document.getElementById("username").value,
+            login_status: document.getElementById("login_status").value,
+            origin: document.getElementById("origin").value,
+            timestamp: document.getElementById("timestamp").value + ":00Z",
+          };
+
+          try {
+            const response = await fetch("http://localhost:8080/login-events", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(formData),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              alert(
+                "Login event created successfully: " + JSON.stringify(data)
+              );
+            } else {
+              alert("Failed to create login event: " + response.status);
+            }
+          } catch (error) {
+            alert("Error: " + error);
+          }
+        });
+    </script>
+  </body>
+</html>
