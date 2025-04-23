@@ -41,12 +41,15 @@
         .addEventListener("submit", async function (e) {
           e.preventDefault(); // Prevent the default form submission
 
+          const rawTimestamp = document.getElementById("timestamp").value;
+          const timestamp = new Date(rawTimestamp).toISOString(); // <- RFC3339 format
+
           const formData = {
             tenant_id: document.getElementById("tenant_id").value,
             username: document.getElementById("username").value,
             login_status: document.getElementById("login_status").value,
             origin: document.getElementById("origin").value,
-            timestamp: document.getElementById("timestamp").value + ":00Z",
+            timestamp: new Date().toISOString(), // <- use converted value
           };
 
           try {
