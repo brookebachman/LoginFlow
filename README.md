@@ -36,3 +36,11 @@ Build the Docker Image
 docker build -t login-api .
 
 docker run -p 8080:8080 --name login-api login-api
+
+To test make sure python3 is installed
+
+run this command python3 -m http.server
+
+Install
+
+go get github.com/gorilla/handlers
