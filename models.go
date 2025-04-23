@@ -15,6 +15,11 @@ type LoginEvent struct {
 	Timestamp  time.Time `json:"timestamp" gorm:"not null"`
 }
 
+// TableName specifies the table name for the LoginEvent model
+func (LoginEvent) TableName() string {
+	return "events"
+}
+
 // This function will be used to initialize the database and automatically migrate
 // the schema (creating tables, etc.) when the application starts.
 func MigrateDB(db *gorm.DB) {

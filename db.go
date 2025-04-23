@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -12,8 +13,15 @@ var db *gorm.DB
 // Initialize the database connection
 func InitDB() error {
 	var err error
+	
+	// Get database path from environment variable or use default
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "test.db"
+	}
+
 	// Open a connection to the database
-	db, err = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	db, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		log.Printf("Error initializing database: %v", err)
 		return err
@@ -32,7 +40,13 @@ func InitDB() error {
 		return err
 	}
 
-	log.Println("Database connected successfully")
+	// Auto migrate the schema
+	if err := db.AutoMigrate(&LoginEvent{}); err != nil {
+		log.Printf("Error migrating database: %v", err)
+		return err
+	}
+
+	log.Println("Database connected and migrated successfully")
 	return nil
 }
 
